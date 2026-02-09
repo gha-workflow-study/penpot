@@ -1024,23 +1024,28 @@ impl RenderState {
                     }
                 }
 
-                for stroke in shape.visible_strokes().rev() {
-                    strokes::render(
-                        self,
-                        shape,
-                        stroke,
-                        Some(strokes_surface_id),
-                        None,
-                        antialias,
-                    );
-                    if !fast_mode {
-                        shadows::render_stroke_inner_shadows(
+                // Skip stroke rendering for clipped frames - they are drawn in render_shape_exit
+                // over the children. Drawing twice would cause incorrect opacity blending.
+                let skip_strokes = matches!(shape.shape_type, Type::Frame(_)) && shape.clip_content;
+                if !skip_strokes {
+                    for stroke in shape.visible_strokes().rev() {
+                        strokes::render(
                             self,
                             shape,
                             stroke,
+                            Some(strokes_surface_id),
+                            None,
                             antialias,
-                            innershadows_surface_id,
                         );
+                        if !fast_mode {
+                            shadows::render_stroke_inner_shadows(
+                                self,
+                                shape,
+                                stroke,
+                                antialias,
+                                innershadows_surface_id,
+                            );
+                        }
                     }
                 }
 
